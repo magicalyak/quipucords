@@ -18,7 +18,8 @@ import api.messages as messages
 from api.common.util import is_int
 from api.deployments_report.view import (build_cached_json_report,
                                          validate_filters)
-from api.models import (DeploymentsReport, DetailsReport)
+from api.insights_report.view import build_cached_insights_json_report
+from api.models import DeploymentsReport, DetailsReport
 from api.reports.reports_gzip_renderer import (ReportsGzipRenderer)
 from api.serializers import DetailsReportSerializer
 
@@ -83,6 +84,9 @@ def reports(request, pk=None):
                          'Deployment report %s could not be created.'
                          '  See server logs.' % deployments_id},
                         status=status.HTTP_424_FAILED_DEPENDENCY)
+    reports_dict['insights_json'] = \
+        build_cached_insights_json_report(deployments_data)
+
     reports_dict['deployments_json'] = \
         build_cached_json_report(deployments_data)
     return Response(reports_dict)

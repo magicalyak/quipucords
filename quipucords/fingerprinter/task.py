@@ -46,6 +46,10 @@ from scanner.task import ScanTaskRunner
 # Get an instance of a logger
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+# Canonical facts for Insights
+CANONICAL_FACTS = ['bios_uuid', 'etc_machine_id', 'insights_client_id',
+                   'ip_addresses', 'mac_addresses',
+                   'subscription_manager_id', 'vm_uuid']
 
 # Keys used to de-duplicate against other network sources
 NETWORK_IDENTIFICATION_KEYS = ['subscription_manager_id',
@@ -200,11 +204,13 @@ class FingerprintTaskRunner(ScanTaskRunner):
         date_field = DateField()
         uuid_field = UUIDField()
         final_fingerprint_list = []
+        insights_hosts = {}
 
         valid_fact_attributes = {
             field.name for field in SystemFingerprint._meta.get_fields()}
 
         for fingerprint_dict in fingerprints_list:
+            found_canonical_facts = False
             # Remove keys that are not part of SystemFingerprint model
             fingerprint_attributes = set(fingerprint_dict.keys())
             invalid_attributes = fingerprint_attributes - valid_fact_attributes
@@ -245,6 +251,21 @@ class FingerprintTaskRunner(ScanTaskRunner):
                         uuid_field.to_representation(
                             fingerprint_dict.get('system_platform_id'))
                     final_fingerprint_list.append(fingerprint_dict)
+
+                    # Check if fingerprint has canonical facts
+                    for fact in CANONICAL_FACTS:
+                        if fingerprint_dict.get(fact):
+                            found_canonical_facts = True
+                            break
+                    # If it has canonical facts, add it to the insights_hosts dict
+                    if found_canonical_facts:
+                        insights_id = fingerprint_dict.pop('system_platform_id')
+                        insights_hosts[insights_id] = fingerprint_dict
+                    else:
+                        self.scan_task.log_message('The following fingerprint has'
+                                                   ' no canonical facts: %s' %
+                                                   fingerprint_dict)
+
                     number_valid += 1
                 except DataError as error:
                     number_invalid += 1
@@ -279,6 +300,14 @@ class FingerprintTaskRunner(ScanTaskRunner):
             status = ScanTask.FAILED
         deployment_report.cached_fingerprints = json.dumps(
             final_fingerprint_list)
+        deployment_report.save()
+        if not insights_hosts:
+            status_message = 'FAILED to create Insights report id=%d - '\
+                'produced no valid fingerprints ' % (
+                    deployment_report.report_id)
+            self.scan_task.log_message(status_message, log_level=logging.ERROR)
+        deployment_report.cached_insights = json.dumps(
+            insights_hosts)
         deployment_report.save()
 
         self.scan_task.log_message('RESULTS (report id=%d) -  '
