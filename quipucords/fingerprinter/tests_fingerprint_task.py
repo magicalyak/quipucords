@@ -1160,4 +1160,4 @@ class EngineTest(TestCase):
                 self.assertIn('failed', status_message.lower())
                 self.assertEqual(status, 'failed')
                 self.assertEqual(
-                    json.dumps(deployments_report.cached_insights), '{}')
+                    json.dumps(deployments_report.cached_insights), '"{}"')
