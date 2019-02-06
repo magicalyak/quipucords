@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2017-2018 Red Hat, Inc.
+# Copyright (c) 2017-2019 Red Hat, Inc.
 #
 # This software is licensed to you under the GNU General Public License,
 # version 3 (GPLv3). There is NO WARRANTY for this software, express or
@@ -115,7 +115,7 @@ class SystemFingerprintSerializer(NotEmptySerializer):
 
     # Red Hat facts
     is_redhat = NullBooleanField(required=False)
-    redhat_certs = CharField(required=False, max_length=128)
+    redhat_certs = CharField(required=False)
     # pylint: disable=invalid-name
     redhat_package_count = IntegerField(
         required=False, min_value=0)
