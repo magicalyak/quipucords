@@ -179,6 +179,7 @@ class FingerprintTaskRunner(ScanTaskRunner):
                 error.__class__.__name__, error), log_level=logging.ERROR)
             raise error
 
+    # pylint: disable=too-many-branches
     def _process_details_report(self, manager_interrupt, details_report):
         """Process the details report.
 
@@ -257,14 +258,15 @@ class FingerprintTaskRunner(ScanTaskRunner):
                         if fingerprint_dict.get(fact):
                             found_canonical_facts = True
                             break
-                    # If it has canonical facts, add it to the insights_hosts dict
+                    # If canonical facts, add it to the insights_hosts dict
                     if found_canonical_facts:
-                        insights_id = fingerprint_dict.pop('system_platform_id')
+                        insights_id = fingerprint_dict.pop(
+                            'system_platform_id')
                         insights_hosts[insights_id] = fingerprint_dict
                     else:
-                        self.scan_task.log_message('The following fingerprint has'
-                                                   ' no canonical facts: %s' %
-                                                   fingerprint_dict)
+                        self.scan_task.log_message(
+                            'The following fingerprint has no canonical '
+                            'facts: %s' % fingerprint_dict)
 
                     number_valid += 1
                 except DataError as error:

@@ -13,15 +13,12 @@
 import json
 import logging
 import os
-import gc
 
 import api.messages as messages
 from api.common.report_json_gzip_renderer import (ReportJsonGzipRenderer)
 from api.common.util import is_int
 from api.models import (DeploymentsReport)
 
-from django.core.exceptions import FieldError
-from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext as _
 
@@ -79,7 +76,7 @@ def insights(request, pk=None):
                          '  See server logs.' % report.details_report.id},
                         status=status.HTTP_424_FAILED_DEPENDENCY)
     report_dict = build_cached_insights_json_report(report)
-    # return Response(report.cached_fingerprints)
+
     return Response(report_dict)
 
 
@@ -99,43 +96,50 @@ def verify_report_fingerprints(fingerprints):
         if found_facts:
             valid_fp.append(fingerprint)
         else:
-            logger.warning('The following fingerprint has no canonical facts: %s' % fingerprint)
+            logger.warning('The following host has no canonical facts: %s',
+                           fingerprint)
 
     return valid_fp
 
 
-def build_report_from_fp(report, fingerprint_dicts):
-    """Create starter object for report json.
+def get_hosts_from_fp(report, fingerprint_dicts):
+    """Generate insights report format from the fingerprints.
 
     :param report: the DeploymentsReport
     :param fingerprint_dicts: the fingerprints for the report
-    :returns: json report start object
+    :returns: json insights report format
     """
     valid_hosts = verify_report_fingerprints(fingerprint_dicts)
     insights_hosts = {}
     for host in valid_hosts:
-        id = host.pop('system_platform_id', None)
-        insights_hosts[id] = host
-    report.cached_insights = json.dumps(
-            insights_hosts)
+        host_id = host.pop('system_platform_id', None)
+        if host_id:
+            insights_hosts[host_id] = host
+        else:
+            logger.warning('The following host has no system_platform_id: %s',
+                           host)
+    # save the insights format after generating
+    report.cached_insights = json.dumps(insights_hosts)
     return insights_hosts
 
 
 def build_cached_insights_json_report(report):
-    """Create a count report based on the fingerprints and the group.
+    """Create an insights report based on a deployments report.
 
-    :param report: the DeploymentsReport used to group count
+    :param report: DeploymentsReport that is used to create insights report
     :returns: json report data
-    :raises: Raises validation error group_count on non-existent field.
+    :raises: Raises failed dependencies if no fingerprints have canonical facts
     """
     if report.cached_insights:
         insights_hosts = json.loads(report.cached_insights)
     else:
-        insights_hosts = build_report_from_fp(report, json.loads(report.cached_fingerprints))
+        insights_hosts = get_hosts_from_fp(
+            report, json.loads(report.cached_fingerprints))
     if not insights_hosts:
         return Response({'detail':
-                             'Insights report %s could not be created.'
-                             '  There were no fingerprints that contained canonical facts.' % report.id},
+                         'Insights report %s could not be created. '
+                         'There were no hosts that contained canonical facts.'
+                         % report.id},
                         status=status.HTTP_424_FAILED_DEPENDENCY)
     report_dict = {'report_id': report.id,
                    'status': report.status,

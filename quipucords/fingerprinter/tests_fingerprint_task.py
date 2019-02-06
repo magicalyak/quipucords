@@ -1121,6 +1121,7 @@ class EngineTest(TestCase):
         """Test processing a details report success."""
         fact_collection = {'name': 'dhcp181-3.gsslab.rdu2.redhat.com',
                            'metadata': {},
+                           'ip_addresses': ['1.2.3.4'],
                            'sources': []}
         deployments_report = DeploymentsReport(report_id=1,
                                                id=1)
@@ -1135,6 +1136,8 @@ class EngineTest(TestCase):
 
             self.assertIn('success', status_message.lower())
             self.assertEqual(status, 'completed')
+            self.assertIn(json.dumps(fact_collection),
+                          deployments_report.cached_insights)
 
     def test_process_details_report_exception(self):
         """Test processing a details report with an exception."""
@@ -1156,3 +1159,5 @@ class EngineTest(TestCase):
 
                 self.assertIn('failed', status_message.lower())
                 self.assertEqual(status, 'failed')
+                self.assertEqual(
+                    json.dumps(deployments_report.cached_insights), '{}')

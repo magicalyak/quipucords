@@ -84,8 +84,8 @@ def reports(request, pk=None):
                          'Deployment report %s could not be created.'
                          '  See server logs.' % deployments_id},
                         status=status.HTTP_424_FAILED_DEPENDENCY)
-    reports_dict['insights_json'] = \
-        build_cached_insights_json_report(deployments_data)
+    insights_report = build_cached_insights_json_report(deployments_data)
+    reports_dict['insights_json'] = insights_report
 
     reports_dict['deployments_json'] = \
         build_cached_json_report(deployments_data)
