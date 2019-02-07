@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018 Red Hat, Inc.
+# Copyright (c) 2018-2019 Red Hat, Inc.
 #
 # This software is licensed to you under the GNU General Public License,
 # version 3 (GPLv3). There is NO WARRANTY for this software, express or
@@ -84,9 +84,11 @@ def reports(request, pk=None):
                          'Deployment report %s could not be created.'
                          '  See server logs.' % deployments_id},
                         status=status.HTTP_424_FAILED_DEPENDENCY)
-    insights_report = build_cached_insights_json_report(deployments_data)
-    reports_dict['insights_json'] = insights_report
-
     reports_dict['deployments_json'] = \
         build_cached_json_report(deployments_data)
+    # insights
+    insights_report = build_cached_insights_json_report(deployments_data)
+    if not insights_report.get('detail'):
+        reports_dict['insights_json'] = insights_report
+
     return Response(reports_dict)

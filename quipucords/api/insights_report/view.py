@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2017-2018 Red Hat, Inc.
+# Copyright (c) 2017-2019 Red Hat, Inc.
 #
 # This software is licensed to you under the GNU General Public License,
 # version 3 (GPLv3). There is NO WARRANTY for this software, express or
@@ -19,6 +19,7 @@ from api.common.report_json_gzip_renderer import (ReportJsonGzipRenderer)
 from api.common.util import is_int
 from api.models import (DeploymentsReport)
 
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext as _
 
@@ -71,12 +72,13 @@ def insights(request, pk=None):
 
     report = get_object_or_404(DeploymentsReport.objects.all(), report_id=pk)
     if report.status != DeploymentsReport.STATUS_COMPLETE:
-        return Response({'detail':
-                         'Insights report %s could not be created.'
-                         '  See server logs.' % report.details_report.id},
-                        status=status.HTTP_424_FAILED_DEPENDENCY)
+        return Response(
+            {'detail': 'Insights report %s could not be created. '
+                       'See server logs.' % report.details_report.id},
+            status=status.HTTP_424_FAILED_DEPENDENCY)
     report_dict = build_cached_insights_json_report(report)
-
+    if report_dict.get('detail'):
+        return Response(report_dict, status=404)
     return Response(report_dict)
 
 
@@ -136,11 +138,12 @@ def build_cached_insights_json_report(report):
         insights_hosts = get_hosts_from_fp(
             report, json.loads(report.cached_fingerprints))
     if not insights_hosts:
-        return Response({'detail':
-                         'Insights report %s could not be created. '
-                         'There were no hosts that contained canonical facts.'
-                         % report.id},
-                        status=status.HTTP_424_FAILED_DEPENDENCY)
+        error_json = {
+            'detail': 'Insights report could not be generated because deployments '
+                      'report %s contained no hosts with canonical facts'
+                      % str(report.id)
+        }
+        return error_json
     report_dict = {'report_id': report.id,
                    'status': report.status,
                    'report_type': 'insights',
