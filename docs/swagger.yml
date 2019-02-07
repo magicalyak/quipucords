@@ -971,11 +971,11 @@ paths:
           schema:
             type: "array"
             items:
-              $ref: "#/definitions/DeploymentsReport"
+              $ref: "#/definitions/InsightsReport"
         401:
           description: "Not authorized"
         404:
-          description: "Report for report id not found"
+          description: "Report for report id not found or could not be created because there were no canonical facts."
   /reports/merge/:
     put:
       tags:

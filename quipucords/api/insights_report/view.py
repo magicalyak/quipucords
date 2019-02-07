@@ -19,7 +19,6 @@ from api.common.report_json_gzip_renderer import (ReportJsonGzipRenderer)
 from api.common.util import is_int
 from api.models import (DeploymentsReport)
 
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext as _
 
@@ -139,9 +138,9 @@ def build_cached_insights_json_report(report):
             report, json.loads(report.cached_fingerprints))
     if not insights_hosts:
         error_json = {
-            'detail': 'Insights report could not be generated because deployments '
-                      'report %s contained no hosts with canonical facts'
-                      % str(report.id)
+            'detail': 'Insights report could not be generated because '
+                      'deployments report %s contained no hosts with '
+                      'canonical facts' % str(report.id)
         }
         return error_json
     report_dict = {'report_id': report.id,
